@@ -206,16 +206,19 @@ tpks/
 
 **Как писать текст.** Абзацы разделяй пустой строкой. `_` пиши как есть (`SYS_04_02`). Символы `# % & $ { }` экранируй: `\# \% \& \$ \{ \}`. Кавычки «ёлочки», тире «—», диапазон «--». Картинки клади в `docs/img/` и вставляй `\includegraphics`.
 
-**Сборка.** `./build.sh docs/02_scm_plan.tex` собирает один документ, `./build.sh` — все. Готовый PDF появляется в `pdf/`, логи — в `docs/build/` (их не коммитим). Скрипт сам берёт `latexmk` и `xelatex`, если они есть, иначе Tectonic. Выбрать движок вручную: `ENGINE=tectonic ./build.sh …`. На Windows запускай из Git Bash (ставится вместе с Git).
+**Сборка.** `./build.sh docs/02_scm_plan.tex` собирает один документ, `./build.sh` — все. Готовый PDF появляется в `pdf/`, логи — в `docs/build/` (их не коммитим). Скрипт сам выбирает движок: `latexmk` (если есть и он, и `xelatex`, и `perl`), иначе `xelatex` напрямую, иначе Tectonic. Выбрать вручную: `ENGINE=tectonic ./build.sh …` (также `latexmk`, `xelatex`). На Windows запускай из Git Bash (ставится вместе с Git).
 
 **Ошибка сборки.** Скрипт печатает строку вида `./02_scm_plan.tex:57: …` — исправь эту строку и собери снова. Если не хватает пакета, скрипт подскажет команду установки.
 
 **Нет LaTeX — поставь сам.** Проверка: `command -v latexmk xelatex tectonic`.
 
-| Система | Быстро, без прав администратора (рекомендуем) | Полный LaTeX |
+| Система | Рекомендуем | Другие варианты |
 |---|---|---|
-| macOS | `brew install tectonic`. Если нет Homebrew: `curl --proto '=https' --tlsv1.2 -fsSL https://drop-sh.fullyjustified.net \| sh`, затем `mkdir -p ~/.local/bin && mv tectonic ~/.local/bin/` и добавь `~/.local/bin` в `PATH` | `brew install --cask mactex-no-gui` (около 5 ГБ). Меньше: `brew install --cask basictex`, затем `sudo tlmgr update --self && sudo tlmgr install latexmk polyglossia titlesec xltabular enumitem caption collection-langcyrillic`. Пароль вводит человек: попроси его выполнить команду через `! …` |
-| Windows | `winget install --id TectonicProject.Tectonic -e` или `scoop install tectonic` | MiKTeX: `winget install MiKTeX.MiKTeX`; недостающие пакеты он ставит сам при первой сборке |
-| Linux | `curl --proto '=https' --tlsv1.2 -fsSL https://drop-sh.fullyjustified.net \| sh`, затем `mv tectonic ~/.local/bin/` | Ubuntu/Debian: `sudo apt install texlive-xetex texlive-latex-extra texlive-lang-cyrillic latexmk fonts-liberation` |
+| macOS, M1–M4 | `brew install tectonic` — без пароля, пакеты докачивает сам | полный LaTeX: `brew install --cask mactex-no-gui` (около 5 ГБ); меньше: `brew install --cask basictex`, затем `sudo tlmgr update --self && sudo tlmgr install latexmk polyglossia titlesec xltabular enumitem caption collection-langcyrillic` |
+| macOS Intel или без Homebrew | `curl --proto '=https' --tlsv1.2 -fsSL https://drop-sh.fullyjustified.net \| sh`, затем `mkdir -p ~/.local/bin && mv tectonic ~/.local/bin/` и добавь `~/.local/bin` в `PATH` (brew на Intel собирает Tectonic из исходников — долго) | MacTeX или BasicTeX, как выше |
+| Windows | MiKTeX: `winget install MiKTeX.MiKTeX`, затем `initexmf --set-config-value=[MPM]AutoInstall=1` (пакеты будут ставиться сами без вопросов) и открой Git Bash заново | `scoop install tectonic`; если он не найдёт Times New Roman, шаблон возьмёт CMU Serif. В winget Tectonic нет |
+| Linux | тот же curl-скрипт, что для macOS Intel; Arch: `sudo pacman -S tectonic` | Ubuntu/Debian: `sudo apt install texlive-xetex texlive-latex-extra texlive-lang-cyrillic latexmk fonts-liberation` |
+
+Команды с `sudo` и установщики с паролем запускает человек: попроси его ввести команду через `! …` в Claude Code. Первая сборка через Tectonic качает пакеты 1–3 минуты, дальше быстро.
 
 Не хватает пакета в TeX Live или MacTeX: `sudo tlmgr install <пакет>`. Если нужен пароль, а человека рядом нет, собери через Tectonic. Нет шрифта Times New Roman — шаблон сам подставит Liberation Serif или CMU Serif; скажи об этом человеку.
