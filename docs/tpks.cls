@@ -116,7 +116,7 @@
   { \tl_if_blank:VT #1 { \msg_error:nnn { tpks } { no-meta } {#2} } }
 
 % Шапка первой страницы и содержание
-\NewDocumentCommand \makeheader { }
+\NewDocumentCommand \makeheader { s }
   {
     \__tpks_check_meta:Nn \g__tpks_title_tl { doctitle }
     \__tpks_check_meta:Nn \g__tpks_version_tl { docversion }
@@ -124,6 +124,25 @@
     \tl_if_blank:VT \g__tpks_authors_tl
       { \tl_gset:Nx \g__tpks_authors_tl { \seq_use:Nn \g__tpks_team_short_seq { ,~ } } }
     \exp_args:Nx \hypersetup { pdftitle = { \exp_not:V \g__tpks_title_tl } }
+    \IfBooleanTF{#1}
+    {
+      \thispagestyle{empty}
+      \begin{center}
+        {\large Национальный~исследовательский~ядерный~университет~«МИФИ»\par}
+        \medskip \g__tpks_course_tl \par
+        \vfill
+        {\Large\bfseries \g__tpks_title_tl \par}
+        \bigskip {\large \g__tpks_project_tl \par}
+        \medskip Версия~\g__tpks_version_tl {}~от~\g__tpks_date_tl \par
+      \end{center}
+      \vfill
+      \noindent\textbf{Состав~команды}\par\smallskip
+      \printteam
+      \medskip\noindent Преподаватель:~\g__tpks_teacher_tl \par
+      \vfill\begin{center}\g__tpks_university_tl\end{center}
+      \clearpage
+    }
+    {
     \begingroup
     \setlength{\parindent}{0pt}
     {\Large\bfseries \g__tpks_title_tl \par}
@@ -134,6 +153,7 @@
     {\small \g__tpks_course_tl {}~·~преподаватель~\g__tpks_teacher_tl {}~·~\g__tpks_university_tl \par}
     \smallskip \hrule \bigskip
     \endgroup
+    }
     \tableofcontents
     \clearpage
   }
