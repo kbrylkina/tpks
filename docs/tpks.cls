@@ -5,6 +5,10 @@
 \ProvidesClass{tpks}[2026/10/02 TPKS documents]
 \LoadClass[12pt,a4paper,oneside]{article}
 
+% Режим сдачи включается отдельным документом; остальные документы не меняются.
+\newif\iftpkssubmission
+\newcommand{\submissioncopy}{\tpkssubmissiontrue}
+
 \ifdefined\XeTeXrevision\else\ifdefined\directlua\else
   \ClassError{tpks}{Нужен XeLaTeX: собирай командой ./build.sh}{Подробнее: AGENTS.md, раздел «LaTeX и сборка».}
 \fi\fi
@@ -133,7 +137,9 @@
         \vfill
         {\Large\bfseries \g__tpks_title_tl \par}
         \bigskip {\large \g__tpks_project_tl \par}
-        \medskip Версия~\g__tpks_version_tl {}~от~\g__tpks_date_tl \par
+        \iftpkssubmission\else
+          \medskip Версия~\g__tpks_version_tl {}~от~\g__tpks_date_tl \par
+        \fi
       \end{center}
       \vfill
       \noindent\textbf{Состав~команды}\par\smallskip
@@ -148,7 +154,9 @@
     {\Large\bfseries \g__tpks_title_tl \par}
     \smallskip
     Проект:~\g__tpks_project_tl \par
-    Версия~\g__tpks_version_tl {}~от~\g__tpks_date_tl \par
+    \iftpkssubmission\else
+      Версия~\g__tpks_version_tl {}~от~\g__tpks_date_tl \par
+    \fi
     Авторы:~\g__tpks_authors_tl \par
     {\small \g__tpks_course_tl {}~·~преподаватель~\g__tpks_teacher_tl {}~·~\g__tpks_university_tl \par}
     \smallskip \hrule \bigskip
@@ -187,12 +195,29 @@
     \iow_now:Nx \@auxout { \token_to_str:N \tpks@reqdefined { \l__tpks_id_str } }
     \par \addvspace { 6pt plus 2pt } \noindent
     \use:x { \exp_not:N \hypertarget { req: \l__tpks_id_str } }
-      { \textbf { \l__tpks_id_str ;~\#\tl_trim_spaces:n {#2} } }
+      { \textbf { \l__tpks_id_str
+          \iftpkssubmission\else ;~\#\tl_trim_spaces:n {#2}\fi } }
     \par \nopagebreak \noindent \ignorespaces
   }
   { \par \addvspace { 6pt plus 2pt } }
 
-\NewDocumentCommand \reqsource { m } { \par \noindent \textit{Источник:}~#1 }
+\NewDocumentCommand \reqsource { m }
+  {
+    \par \noindent \textit{Источник:}~
+    \iftpkssubmission
+      \group_begin:
+      \str_if_eq:nnTF {#1} {derived=[yes]}
+        { Производное~требование.~Основание~приведено~в~комментарии. }
+        {
+          \tl_set:Nn \l_tmpa_tl {#1}
+          \regex_replace_once:nnN { \A parent=\[ } {} \l_tmpa_tl
+          \regex_replace_once:nnN { \] \Z } {} \l_tmpa_tl
+          \clist_set:NV \l_tmpa_clist \l_tmpa_tl
+          «Системные~требования»,~\clist_use:Nn \l_tmpa_clist {,~}
+        }
+      \group_end:
+    \else #1 \fi
+  }
 \NewDocumentCommand \reqverify { m } { \par \noindent \textit{Способ~проверки:}~#1 }
 \NewDocumentCommand \reqnote   { m } { \par \noindent \textit{Комментарий:}~#1 }
 
@@ -220,7 +245,15 @@
   {
     \par \noindent \hangindent = \parindent
     \prop_get:NnNTF \g__tpks_terms_prop {#1} \l__tpks_def_tl
-      { \textbf{#1}~\textemdash{}~\l__tpks_def_tl }
+      {
+        \iftpkssubmission
+          \tl_replace_all:Nnn \l__tpks_def_tl {---} {--}
+          \tl_replace_all:Nnn \l__tpks_def_tl {—} {–}
+          \textbf{#1}~\textendash{}~\l__tpks_def_tl
+        \else
+          \textbf{#1}~\textemdash{}~\l__tpks_def_tl
+        \fi
+      }
       { \textbf{#1}~\clarify{нет~в~glossary.tex} \msg_warning:nnn { tpks } { no-term } {#1} }
     \par
   }

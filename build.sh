@@ -57,8 +57,16 @@ for src in "$@"; do
   compile "$name"
   rc=$?
   if [ $rc -eq 0 ] && [ -f "build/$name.pdf" ]; then
-    cp -f "build/$name.pdf" "$root/pdf/$name.pdf"
-    echo "   готово: pdf/$name.pdf"
+    pdf_name="$name.pdf"
+    if [ "$name" = "05_software_requirements" ]; then
+      pdf_name="05_software_requirements_final.pdf"
+    fi
+    if ! cp -f "build/$name.pdf" "$root/pdf/$pdf_name"; then
+      echo "   ОШИБКА: не удалось сохранить pdf/$pdf_name" >&2
+      status=1
+      continue
+    fi
+    echo "   готово: pdf/$pdf_name"
     grep -h -E "tpks Warning|LaTeX Warning: (Reference|There were undefined)" "$log" 2>/dev/null | sort -u | head -20
   else
     status=1

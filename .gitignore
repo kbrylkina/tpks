@@ -10,3 +10,8 @@ docs/build/
 *.fdb_latexmk
 *.xdv
 *.synctex.gz
+
+# Локальные прежние PDF СПТ; в репозитории хранится только итоговый файл.
+/pdf/05_software_requirements.pdf
+/pdf/05_software_requirements_v2.pdf
+/pdf/05_software_requirements_v3.pdf
