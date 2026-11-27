@@ -37,7 +37,7 @@
 \setotherlanguage{english}
 
 % --- Страница и абзацы ---------------------------------------------------------
-\RequirePackage[a4paper,left=25mm,right=15mm,top=20mm,bottom=20mm]{geometry}
+\RequirePackage[a4paper,left=25mm,right=15mm,top=20mm,bottom=20mm,headheight=15pt,headsep=5mm]{geometry}
 \linespread{1.15}
 \setlength{\parindent}{1.25cm}
 \setlength{\parskip}{0pt}
@@ -73,6 +73,7 @@
 
 \RequirePackage{xcolor}
 \RequirePackage[unicode,hidelinks,bookmarksnumbered]{hyperref}
+\RequirePackage{fancyhdr}
 
 % Подчёркивание в тексте печатается как есть: SYS_04_02 можно писать без \_.
 \AtBeginDocument{\catcode`\_=12\relax}
@@ -83,6 +84,9 @@
 \msg_new:nnn { tpks } { dup-id } { ID~«#1»~уже~есть~в~этом~документе:~у~каждого~требования~свой~ID. }
 \msg_new:nnn { tpks } { no-term } { Термина~«#1»~нет~в~docs/glossary.tex:~добавьте~\iow_char:N\\term{#1}{…}. }
 \msg_new:nnn { tpks } { dup-term } { Термин~«#1»~определён~в~docs/glossary.tex~дважды. }
+\msg_new:nnn { tpks } { no-header } { Нет~\iow_char:N\\makeheader:~он~идёт~первым~после~\iow_char:N\\begin{document}~(шаблоны~—~docs/templates/). }
+\msg_new:nnn { tpks } { late-changelog } { Лист~регистрации~изменений~ставится~сразу~после~\iow_char:N\\makeheader,~до~первого~раздела~(docs/00_formatting.tex). }
+\msg_new:nnn { tpks } { no-changelog } { Нет~листа~регистрации~изменений:~поставьте~\iow_char:N\\begin{changelog}…\iow_char:N\\end{changelog}~сразу~после~\iow_char:N\\makeheader. }
 \cs_generate_variant:Nn \msg_error:nnn { nnV }
 \cs_generate_variant:Nn \msg_warning:nnn { nnV }
 
@@ -119,51 +123,94 @@
 \cs_new_protected:Npn \__tpks_check_meta:Nn #1#2
   { \tl_if_blank:VT #1 { \msg_error:nnn { tpks } { no-meta } {#2} } }
 
-% Шапка первой страницы и содержание
+% Титульный лист. Сразу после него — лист регистрации изменений (окружение changelog),
+% а содержание печатает конец changelog. Порядок частей — docs/00_formatting.tex.
+\tl_new:N \g__tpks_changesbase_tl
+\tl_new:N \g__tpks_basever_tl
+\bool_new:N \g__tpks_header_bool
+\bool_new:N \g__tpks_changelog_bool
+% \changesbase{N}{ДД.ММ.ГГГГ} ставит ./build.sh --changes в экземпляр с выделенными изменениями:
+% принята версия N, сданная в эту дату. Строки листа изменений новее версии N выделяются.
+\NewDocumentCommand \changesbase { m m }
+  {
+    \tl_gset:Nx \g__tpks_basever_tl { \tl_trim_spaces:n {#1} }
+    \tl_gset:Nn \g__tpks_changesbase_tl { версия~#1,~сдана~#2 }
+  }
+% \tpks@ifnewversion{N}{если новее принятой}{иначе}
+\cs_new_protected:Npn \tpks@ifnewversion #1
+  {
+    \bool_set_false:N \l_tmpa_bool
+    \tl_if_blank:VF \g__tpks_basever_tl
+      {
+        \regex_match:nnT { \A \s* \d+ \s* \Z } {#1}
+          { \int_compare:nNnT {#1} > { \g__tpks_basever_tl } { \bool_set_true:N \l_tmpa_bool } }
+      }
+    \bool_if:NTF \l_tmpa_bool
+  }
+
+% Колонтитул: слева название документа, справа версия; номер страницы внизу по центру.
+\cs_new_protected:Npn \__tpks_page_style:
+  {
+    \fancyhf{}
+    \fancyhead[L]{\small \g__tpks_title_tl}
+    \fancyhead[R]{\small Версия~\g__tpks_version_tl}
+    \fancyfoot[C]{\thepage}
+    \renewcommand{\headrulewidth}{0.4pt}
+    \renewcommand{\footrulewidth}{0pt}
+  }
+\fancypagestyle{tpks}{ \__tpks_page_style: }
+\fancypagestyle{plain}{ \__tpks_page_style: }
+
+\cs_new_protected:Npn \__tpks_changes_note:
+  {
+    \par\vspace{1.5em}
+    \fbox{\parbox{0.9\textwidth}{\centering\small
+      \textbf{Экземпляр~с~выделенными~изменениями}\par\smallskip
+      Выделено~всё,~что~изменилось~после~принятой~версии:~\g__tpks_changesbase_tl.\par
+      \DIFadd{Добавленный~текст}~—~синим~с~подчёркиванием,~\DIFdel{удалённый~текст}~—~красным~зачёркнутым.\par}}
+    \par
+  }
+
 \NewDocumentCommand \makeheader { s }
   {
     \__tpks_check_meta:Nn \g__tpks_title_tl { doctitle }
     \__tpks_check_meta:Nn \g__tpks_version_tl { docversion }
     \__tpks_check_meta:Nn \g__tpks_date_tl { docdate }
-    \tl_if_blank:VT \g__tpks_authors_tl
-      { \tl_gset:Nx \g__tpks_authors_tl { \seq_use:Nn \g__tpks_team_short_seq { ,~ } } }
+    \bool_gset_true:N \g__tpks_header_bool
     \exp_args:Nx \hypersetup { pdftitle = { \exp_not:V \g__tpks_title_tl } }
-    \IfBooleanTF{#1}
-    {
-      \thispagestyle{empty}
-      \begin{center}
-        {\large Национальный~исследовательский~ядерный~университет~«МИФИ»\par}
-        \medskip \g__tpks_course_tl \par
-        \vfill
-        {\Large\bfseries \g__tpks_title_tl \par}
-        \bigskip {\large \g__tpks_project_tl \par}
-        \iftpkssubmission\else
-          \medskip Версия~\g__tpks_version_tl {}~от~\g__tpks_date_tl \par
-        \fi
-      \end{center}
+    \pagestyle{tpks}
+    \thispagestyle{empty}
+    \begin{center}
+      {\large Национальный~исследовательский~ядерный~университет~«МИФИ»\par}
+      \medskip \g__tpks_course_tl \par
       \vfill
-      \noindent\textbf{Состав~команды}\par\smallskip
-      \printteam
-      \medskip\noindent Преподаватель:~\g__tpks_teacher_tl \par
-      \vfill\begin{center}\g__tpks_university_tl\end{center}
-      \clearpage
-    }
-    {
-    \begingroup
-    \setlength{\parindent}{0pt}
-    {\Large\bfseries \g__tpks_title_tl \par}
-    \smallskip
-    Проект:~\g__tpks_project_tl \par
-    \iftpkssubmission\else
-      Версия~\g__tpks_version_tl {}~от~\g__tpks_date_tl \par
-    \fi
-    Авторы:~\g__tpks_authors_tl \par
-    {\small \g__tpks_course_tl {}~·~преподаватель~\g__tpks_teacher_tl {}~·~\g__tpks_university_tl \par}
-    \smallskip \hrule \bigskip
-    \endgroup
-    }
-    \tableofcontents
+      {\Large\bfseries \g__tpks_title_tl \par}
+      \bigskip {\large \g__tpks_project_tl \par}
+      % Версия на титульном листе и в колонтитуле — во всех документах, в том числе в режиме сдачи
+      % (проверочный перечень полноты, вопрос 2).
+      \medskip Версия~\g__tpks_version_tl {}~от~\g__tpks_date_tl \par
+      \tl_if_blank:VF \g__tpks_authors_tl
+        { \medskip Авторы~документа:~\g__tpks_authors_tl \par }
+      \tl_if_blank:VF \g__tpks_changesbase_tl { \__tpks_changes_note: }
+    \end{center}
+    \vfill
+    \noindent\textbf{Состав~команды}\par\smallskip
+    \printteam
+    \medskip\noindent Преподаватель:~\g__tpks_teacher_tl \par
+    \vfill\begin{center}\g__tpks_university_tl\end{center}
     \clearpage
+  }
+
+\cs_new_protected:Npn \tpks@changelogcheck
+  {
+    \bool_if:NF \g__tpks_header_bool { \msg_error:nn { tpks } { no-header } }
+    \int_compare:nNnT { \value{section} } > { 0 } { \msg_error:nn { tpks } { late-changelog } }
+    \bool_gset_true:N \g__tpks_changelog_bool
+  }
+\AtEndDocument
+  {
+    \bool_if:NF \g__tpks_header_bool { \msg_error:nn { tpks } { no-header } }
+    \bool_if:NF \g__tpks_changelog_bool { \msg_error:nn { tpks } { no-changelog } }
   }
 
 % Таблица состава команды из project.tex
@@ -173,6 +220,8 @@
       \hline \textbf{ФИО} & \textbf{Группа} & \textbf{Роль} \\ \hline \endhead
       \seq_use:Nn \g__tpks_team_rows_seq { }
     \end{xltabular}
+    % xltabular увеличивает номер таблицы и без подписи: возвращаем, чтобы нумерация не сбивалась.
+    \addtocounter{table}{-1}
   }
 
 % --- Требования ----------------------------------------------------------------------
@@ -194,12 +243,27 @@
       { \seq_gput_right:NV \g__tpks_ids_seq \l__tpks_id_str }
     \iow_now:Nx \@auxout { \token_to_str:N \tpks@reqdefined { \l__tpks_id_str } }
     \par \addvspace { 6pt plus 2pt } \noindent
+    % Идентификатор со служебными символами: «SRD_01_01; #1» — ID, «;~#», версия.
     \use:x { \exp_not:N \hypertarget { req: \l__tpks_id_str } }
-      { \textbf { \l__tpks_id_str
-          \iftpkssubmission\else ;~\#\tl_trim_spaces:n {#2}\fi } }
+      { \textbf { \l__tpks_id_str ;~\#\tl_trim_spaces:n {#2} } }
     \par \nopagebreak \noindent \ignorespaces
   }
   { \par \addvspace { 6pt plus 2pt } }
+
+% Версии требований всех документов: build.sh пишет их в build/req_versions.tex
+% строками \tpksreqversion{SYS_01_01}{1}. По ним ссылка печатается как «SYS_01_01; #1».
+\prop_new:N \g__tpks_reqver_prop
+\str_new:N \l__tpks_ref_str
+\tl_new:N \l__tpks_ver_tl
+\prg_generate_conditional_variant:Nnn \prop_get:NnN { NV } { TF }
+\NewDocumentCommand \tpksreqversion { m m } { \prop_gput:Nnn \g__tpks_reqver_prop {#1} {#2} }
+\NewDocumentCommand \tpksversioned { m }
+  {
+    \str_set:Nx \l__tpks_ref_str { \tl_trim_spaces:n {#1} }
+    \prop_get:NVNTF \g__tpks_reqver_prop \l__tpks_ref_str \l__tpks_ver_tl
+      { \l__tpks_ref_str ;~\#\l__tpks_ver_tl }
+      { #1 }
+  }
 
 \NewDocumentCommand \reqsource { m }
   {
@@ -213,7 +277,10 @@
           \regex_replace_once:nnN { \A parent=\[ } {} \l_tmpa_tl
           \regex_replace_once:nnN { \] \Z } {} \l_tmpa_tl
           \clist_set:NV \l_tmpa_clist \l_tmpa_tl
-          «Системные~требования»,~\clist_use:Nn \l_tmpa_clist {,~}
+          \seq_clear:N \l_tmpa_seq
+          \clist_map_inline:Nn \l_tmpa_clist
+            { \seq_put_right:Nx \l_tmpa_seq { \exp_not:N \tpksversioned { \exp_not:n {##1} } } }
+          «Системные~требования»,~\seq_use:Nn \l_tmpa_seq {,~}
         }
       \group_end:
     \else #1 \fi
@@ -278,19 +345,32 @@
   { \endxltabular }
 \ExplSyntaxOff
 
+% Сразу после \makeheader:
 % \begin{changelog} \change{версия}{дата}{что изменено}{кто}{основание} \end{changelog}
-\newenvironment{changelog}{%
+% После листа печатается содержание, основной текст начинается с новой страницы.
+% Тело берётся целиком (+b): иначе xltabular съедает всё, что стоит после таблицы.
+\NewDocumentEnvironment{changelog}{+b}{%
+  \tpks@changelogcheck
   \section*{Лист регистрации изменений}%
   \addcontentsline{toc}{section}{Лист регистрации изменений}%
-  \xltabular{\textwidth}{|c|c|L|P{3.3cm}|P{2.8cm}|}%
+  \begin{xltabular}{\textwidth}{|c|c|L|P{3.7cm}|P{2.8cm}|}%
   \hline \textbf{Версия} & \textbf{Дата} & \textbf{Что изменено} & \textbf{Кто} & \textbf{Основание} \\ \hline
   \endhead
-}{\endxltabular}
-\newcommand{\change}[5]{#1 & #2 & #3 & #4 & #5 \\ \hline}
+  #1
+  \end{xltabular}%
+  \addtocounter{table}{-1}%
+  \clearpage\tableofcontents\clearpage
+}{}
+% В экземпляре с изменениями строки версий новее принятой выделены как добавленный текст.
+\newcommand{\change}[5]{\tpks@ifnewversion{#1}%
+  {\DIFadd{#1} & \DIFadd{#2} & \leavevmode\DIFadd{#3} & \leavevmode\DIFadd{#4} & \leavevmode\DIFadd{#5} \\ \hline}%
+  {#1 & #2 & #3 & #4 & #5 \\ \hline}}
 
 % Данные проекта и команды; читаются после \ExplSyntaxOff, чтобы пробелы не терялись.
 \InputIfFileExists{project.tex}{}{\ClassWarning{tpks}{Нет файла docs/project.tex}}
 
 % Глоссарий читается в начале документа, после включения «_ как есть».
 \AtBeginDocument{\InputIfFileExists{glossary.tex}{}{\ClassWarning{tpks}{Нет файла docs/glossary.tex}}}
+% Версии требований для ссылок; без файла (например, в Overleaf) ссылка печатается без версии.
+\AtBeginDocument{\InputIfFileExists{build/req_versions.tex}{}{}}
 \endinput

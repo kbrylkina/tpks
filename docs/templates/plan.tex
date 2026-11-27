@@ -1,0 +1,59 @@
+% Шаблон плана: «План управления конфигурацией ПО», «План разработки ПО», «План верификации ПО».
+% Скопируйте в docs/0N_<имя>.tex, замените название, версию и дату, заполните разделы.
+% Красные пометки \clarify{…} — места, которые надо заполнить; перед сдачей их не остаётся.
+% Правила оформления — docs/00_formatting.tex. Собрать: ./build.sh docs/0N_<имя>.tex
+\documentclass{tpks}
+\doctitle{План …}
+\docversion{1}
+\docdate{ДД.ММ.ГГГГ}
+
+\begin{document}
+\makeheader
+% Лист регистрации изменений — сразу после \makeheader. Новая версия — новая строка.
+\begin{changelog}
+\change{1}{ДД.ММ.ГГГГ}{Первая версия}{Фамилия И. О.}{Задание к паре ДД.ММ.ГГГГ}
+\end{changelog}
+
+\section{Введение}
+\subsection{Назначение}
+\clarify{цель плана}
+
+\subsection{Область применения}
+\clarify{к каким процессам и данным жизненного цикла относится план}
+
+\subsection{Термины и сокращения}
+Определения взяты из общего глоссария проекта.
+\printterms{ЕК, Базовая версия}
+
+\subsection{Ссылки}
+\begin{enumerate}
+  \item \clarify{«Название документа». Что из него используется}
+\end{enumerate}
+
+\section{Организация и роли}
+\begin{tabl}{|P{4.5cm}|L|P{4cm}|}{Роли участников}[tab:roles]{\textbf{Роль} & \textbf{Обязанности} & \textbf{Участник}}
+\clarify{роль} & \clarify{обязанности} & \clarify{ФИО} \\ \hline
+\end{tabl}
+
+\section{Процессы}
+% Каждый процесс описывается по одной схеме. Входы и выходы — README.md §3.1.
+\subsection{\clarify{Название процесса}}
+\subsubsection{Цели}
+\clarify{}
+\subsubsection{Входные данные}
+\clarify{}
+\subsubsection{Условия входа}
+\clarify{}
+\subsubsection{Описание}
+\clarify{}
+\subsubsection{Условия выхода}
+\clarify{}
+\subsubsection{Выходные данные}
+\clarify{}
+\subsubsection{Роли}
+\clarify{}
+
+\section{Среда и инструменты}
+\clarify{средства, которые используются в процессах плана}
+
+\end{document}
